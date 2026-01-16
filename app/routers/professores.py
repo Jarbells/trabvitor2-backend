@@ -1,46 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from .. import models, schemas, database, auth
+from .. import schemas, database, models, auth
+from ..services import professor_service
 
-router = APIRouter(
-    prefix="/professores",
-    tags=["professores"]
-)
+router = APIRouter(prefix="/professores", tags=["professores"])
 
-# LISTAR
-@router.get("/", response_model=List[schemas.ProfessorResponse])
-def listar_professores(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    return db.query(models.Professor).offset(skip).limit(limit).all()
-
-# CRIAR - PROTEGIDO
 @router.post("/", response_model=schemas.ProfessorResponse, status_code=status.HTTP_201_CREATED)
 def criar_professor(prof: schemas.ProfessorCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    db_prof = db.query(models.Professor).filter(models.Professor.email == prof.email).first()
-    if db_prof:
-        raise HTTPException(status_code=400, detail="Email de professor já cadastrado")
-    
-    novo_prof = models.Professor(**prof.dict())
-    db.add(novo_prof)
-    db.commit()
-    db.refresh(novo_prof)
-    return novo_prof
+    return professor_service.create(db, prof)
 
-# BUSCAR POR ID
+@router.get("/", response_model=List[schemas.ProfessorResponse])
+def listar_professores(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
+    return professor_service.get_all(db, skip, limit)
+
 @router.get("/{prof_id}", response_model=schemas.ProfessorResponse)
 def obter_professor(prof_id: int, db: Session = Depends(database.get_db)):
-    prof = db.query(models.Professor).filter(models.Professor.id == prof_id).first()
+    prof = professor_service.get_by_id(db, prof_id)
     if not prof:
         raise HTTPException(status_code=404, detail="Professor não encontrado")
     return prof
 
-# DELETAR - PROTEGIDO
+@router.put("/{prof_id}", response_model=schemas.ProfessorResponse)
+def atualizar_professor(prof_id: int, prof: schemas.ProfessorCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    prof_atualizado = professor_service.update(db, prof_id, prof)
+    if not prof_atualizado:
+        raise HTTPException(status_code=404, detail="Professor não encontrado")
+    return prof_atualizado
+
 @router.delete("/{prof_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar_professor(prof_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    prof = db.query(models.Professor).filter(models.Professor.id == prof_id).first()
+    prof = professor_service.get_by_id(db, prof_id)
     if not prof:
         raise HTTPException(status_code=404, detail="Professor não encontrado")
-    
-    db.delete(prof)
-    db.commit()
+    professor_service.delete(db, prof_id)
     return None

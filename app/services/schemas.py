@@ -11,7 +11,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     class Config:
-        from_attributes = True  # <--- Mudou aqui (antes era orm_mode)
+        orm_mode = True
 
 class Token(BaseModel):
     access_token: str
@@ -29,7 +29,7 @@ class DisciplinaCreate(DisciplinaBase):
 class DisciplinaResponse(DisciplinaBase):
     id: int
     class Config:
-        from_attributes = True # <--- Mudou aqui
+        orm_mode = True
 
 # --- 3. Professor ---
 class ProfessorBase(BaseModel):
@@ -44,24 +44,25 @@ class ProfessorCreate(ProfessorBase):
 class ProfessorResponse(ProfessorBase):
     id: int
     class Config:
-        from_attributes = True # <--- Mudou aqui
+        orm_mode = True
 
 # --- 4. Turma ---
 class TurmaBase(BaseModel):
     codigo_turma: str
     semestre: str
-    disciplina_id: Optional[int] = None
-    professor_id: Optional[int] = None
+    disciplina_id: int
+    professor_id: int
 
 class TurmaCreate(TurmaBase):
     pass
 
 class TurmaResponse(TurmaBase):
     id: int
+    # Podemos aninhar respostas para mostrar detalhes
     disciplina: Optional[DisciplinaResponse] = None 
     professor: Optional[ProfessorResponse] = None
     class Config:
-        from_attributes = True # <--- Mudou aqui
+        orm_mode = True
 
 # --- 5. Aluno ---
 class AlunoBase(BaseModel):
@@ -77,6 +78,6 @@ class AlunoCreate(AlunoBase):
 
 class AlunoResponse(AlunoBase):
     id: int
-    turma: Optional[TurmaResponse] = None
+    turma: Optional[TurmaResponse] = None # Mostra detalhes da turma
     class Config:
-        from_attributes = True # <--- Mudou aqui
+        orm_mode = True
